@@ -3,10 +3,76 @@
 A complete implementation of hierarchical matrix structures in x86-64 assembly language, based on the Matrix-Tree concept that embeds trees inside matrices for efficient batch computation.
 
 ## 📋 Overview
+This concept explores **embedding trees inside matrices**—where each cell of a matrix is not just a number, but a structured tree of sub-matrices or data. This hybrid design combines the rigid algebraic structure of matrices with the flexible, hierarchical nature of trees.
+
+The result is a **Matrix of Trees**, enabling new computational patterns that:
+- Store multiple related matrices inside a single composite structure.
+- Collapse or expand those structures depending on whether you want a single aggregated result or a batch of parallel results.
+- Exploit tree hierarchy for **reuse, parallelism, and CPU efficiency**.
 
 This project implements the Matrix-Tree data structure entirely in AT&T syntax x86-64 assembly. Each cell of a matrix can contain either:
 - **Leaf nodes**: Actual numerical matrix data
 - **Internal nodes**: Trees of sub-matrices that can be collapsed or evaluated in parallel
+
+## Core Idea
+A traditional matrix looks like this:
+
+\[ \begin{bmatrix} 2 & 5 \\ 1 & 3 \end{bmatrix} \cdot \begin{bmatrix} 1 \\ 2 \end{bmatrix} \]
+
+In the Matrix-Tree system:
+- Each entry \(2,5,1,3\) is replaced by a **tree node**, which may itself represent a hierarchy of sub-matrices.
+- A matrix multiplication then becomes an operation that **scales and merges entire trees** instead of scalars.
+
+## Two Modes of Computation
+
+### 1. **Collapsed Mode (Single Result)**
+Each tree is collapsed (via addition, averaging, or another operator) into one effective block. The result is equivalent to solving with one large aggregated matrix.
+
+- Example: if each cell’s tree holds several variations of a block, the collapsed matrix might represent their **sum or mean**.
+- Useful for: probabilistic systems, combined models, or aggregated effects.
+
+### 2. **Fused Batch Mode (Many Results at Once)**
+Instead of collapsing, the system propagates the input through **all sub-matrices simultaneously**. The tree structure allows reuse of shared nodes, so repeated sub-blocks are only evaluated once.
+
+- Example: computing solutions for \(A^{(1)}, A^{(2)}, \dots, A^{(k)}\) in one pass.
+- Useful for: scenario testing, Monte Carlo sampling, multi-model simulation.
+
+## Why This Matters
+
+1. **CPU Efficiency**
+   - Shared subtrees mean common computations are reused.
+   - Parallel evaluation is natural (rows and subtrees are independent).
+   - Batched operations map well to SIMD and GPU acceleration.
+
+2. **Flexibility of Operations**
+   - Define custom node operators: sum, min, max, block-diagonal, symbolic merge.
+   - Vector/matrix multiplications become generalized message-passing over trees.
+
+3. **Unified View**
+   - Store *many* matrices inside one structure.
+   - Choose at runtime whether to get a **single collapsed answer** or a **set of parallel answers**.
+
+## Implementation Notes
+
+- Each tree node holds either:
+  - A **leaf block** (e.g., a small \(b \times b\) dense matrix), or
+  - An **internal node** that combines children (default: addition).
+
+- Operations:
+  - **⊗ (scale):** multiply a block by a scalar/vector.
+  - **⊕ (merge):** combine trees according to a chosen operator.
+
+- Two evaluation paths:
+  1. `MultiplyCollapsed(x)` → single result using collapsed trees.
+  2. `MultiplyFused(X, K)` → multiple results for \(K\) right-hand sides, evaluated together with subtree sharing.
+
+## Benefits at a Glance
+
+- ✅ Encodes **many matrices in one**
+- ✅ Flexible choice: one answer or many answers
+- ✅ **Parallel and cache-friendly** evaluation
+- ✅ Customizable algebra (sum, min, symbolic merge)
+- ✅ Reusable in simulation, ML, and symbolic systems
 
 ## 🎯 Key Features
 
@@ -23,7 +89,7 @@ This project implements the Matrix-Tree data structure entirely in AT&T syntax x
 - `matrix_tree.asm` - Core assembly implementation (~600 lines)
 - `matrix_tree.h` - C header for interfacing with assembly
 - `demo.c` - Demonstration program with examples
-- `Makefile` - Build configuration
+- `CMakeLists.txt` - Build configuration
 
 ## 🔧 Building
 
@@ -31,11 +97,6 @@ This project implements the Matrix-Tree data structure entirely in AT&T syntax x
 make demo
 ./demo
 ```
-
-**Requirements:**
-- GCC with x86-64 support
-- GNU Assembler (as)
-- Linux environment (tested on Ubuntu 24)
 
 ## 🏗️ Data Structure
 
@@ -283,10 +344,6 @@ Potential extensions mentioned in the original concept:
 ## 📝 License
 
 This is an educational implementation. Feel free to use and modify for learning purposes.
-
-## 🙏 Acknowledgments
-
-Based on the Matrix-Tree concept described in the provided documentation, which explores embedding trees inside matrices for flexible computation patterns.
 
 ---
 
